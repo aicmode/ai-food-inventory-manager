@@ -8,7 +8,7 @@ import { categorySchema, organizationSettingsSchema } from "@/lib/validation/sch
 export async function updateOrganizationAction(_previous: ActionResult | null, formData: FormData): Promise<ActionResult> {
   const auth = await authorizeAction("organization.manage");
   if (!auth.ok) return auth;
-  if (auth.context.isDemo) return { ok: false, message: "ポートフォリオ版では組織設定を変更できません。" };
+  if (auth.context.isDemo) return { ok: false, message: "販売デモでは組織設定を変更できません。" };
   const parsed = organizationSettingsSchema.safeParse(formDataToObject(formData));
   if (!parsed.success) return validationFailure(parsed.error);
 

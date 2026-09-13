@@ -132,7 +132,7 @@ export default async function AiOrdersPage({ searchParams }: PageProps<"/ai-orde
         <Alert tone="info" title="数量の決め方">
           推奨数は、直近7日・30日の出庫平均、曜日傾向、リードタイム＋発注サイクル（{organization.reviewPeriodDays}日）、安全在庫、発注点、入荷予定、期限切れ・消化不能在庫、廃棄傾向、発注単位・最小発注数量から
           <strong className="font-semibold">決定論的に計算</strong>しています。
-          {isAiConfigured() ? "「説明」では AI が計算結果を文章で解説します（数量は変更しません）。" : "「説明」では計算結果を定型文で解説します（AI API 未設定）。"}
+          {isAiConfigured() ? "「説明」では AI が計算結果を文章で解説します（数量は変更しません）。" : "「説明」では計算結果を定型文で解説します（外部AI API は使用しません）。"}
         </Alert>
       </div>
 

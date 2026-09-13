@@ -15,6 +15,7 @@ import {
 } from "react";
 
 import type { ActionResult } from "@/lib/validation/common";
+import { demoSuccessMessage, recordDemoOperation } from "@/lib/app-mode";
 
 import { buttonClasses, type ButtonVariant } from "./button";
 import { useToast } from "./toast";
@@ -66,7 +67,8 @@ export function ActionForm<T>({
     try {
       const next = await action(previous, formData);
       if (next.ok) {
-        toast.success(next.message);
+        recordDemoOperation(next.message);
+        toast.success(demoSuccessMessage(next.message));
         onSuccess?.(next);
         if (resetOnSuccess) formRef.current?.reset();
         if (next.redirectTo) router.push(next.redirectTo);

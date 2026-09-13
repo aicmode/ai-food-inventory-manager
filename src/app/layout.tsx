@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     template: "%s | AI食品在庫・発注管理",
   },
   description: "在庫・賞味期限・発注を、ひとつの画面で。複数拠点・ロット・FEFO・AI発注提案に対応した食品在庫管理システム。",
-  robots: { index: false, follow: false },
+  robots: { index: true, follow: true },
 };
 
 export const viewport: Viewport = {

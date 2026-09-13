@@ -5,10 +5,17 @@ import { requireOrgContext } from "@/lib/auth/context";
 import { getCategories } from "@/lib/data/lookups";
 import { hasPermission } from "@/lib/domain/permissions";
 import { isAiConfigured } from "@/lib/ai/provider";
+import { isDemoMode } from "@/lib/app-mode";
 
 import { CategoryForm, OrganizationSettingsForm } from "./settings-forms";
+import { DemoResetPanel } from "./demo-reset";
 
 export const metadata: Metadata = { title: "設定" };
+
+function aiStatusText(): string {
+  if (isDemoMode()) return "販売デモでは外部AI APIを呼び出さず、決定論的なテンプレートで説明文を表示します。";
+  return isAiConfigured() ? "AI API を使用して説明文を生成します。" : "AI API は未設定です。決定論的なテンプレートで説明文を表示します。";
+}
 
 export default async function SettingsPage() {
   const context = await requireOrgContext();
@@ -21,13 +28,13 @@ export default async function SettingsPage() {
 
   return (
     <>
-      <PageHeader title="設定" description="デモ組織の発注基準・カテゴリ・システム状態を確認します。" />
+      <PageHeader title="設定" description="発注基準・カテゴリ・現在のシステム環境を確認します。" />
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <Card>
           <CardHeader title="組織設定" description="AI発注提案の判定基準にも使われます。" />
           <CardBody className="space-y-3">
             {!canManageOrg ? (
-              <Alert tone="info">ポートフォリオ版では組織名と発注基準を固定しています。</Alert>
+              <Alert tone="info">販売デモでは組織名と発注基準を固定しています。</Alert>
             ) : null}
             <OrganizationSettingsForm
               disabled={!canManageOrg}
@@ -37,14 +44,26 @@ export default async function SettingsPage() {
         </Card>
 
         <Card>
-          <CardHeader title="システム状態" description="ポートフォリオ版は認証操作なしで利用できます。" />
+          <CardHeader title="システム状態" description="現在のデータ環境とAI説明の動作を確認できます。" />
           <CardBody className="space-y-3">
-            <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-              AI説明: {isAiConfigured() ? "AI API を使用して説明文を生成します。" : "AI API は未設定です。決定論的なテンプレートで説明文を表示します。"}
+            <div className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
+              現在の環境: {isDemoMode() ? "販売デモ（固定サンプルデータ）" : "Client Production（専用データベース）"}
             </div>
             <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-              データ保護: 組織分離・RLS・業務RPCによる整合性検証が有効です。
+              AI説明: {aiStatusText()}
             </div>
+            <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+              データ保護: {isDemoMode() ? "外部データベースへ接続しません。本番導入時は専用DB・組織分離・RLS・業務RPCを利用できます。" : "組織分離・RLS・業務RPCによる整合性検証が有効です。"}
+            </div>
+            {isDemoMode() ? (
+              <div id="demo-data" className="rounded-md border border-slate-200 p-3">
+                <p className="text-sm font-semibold text-slate-900">デモデータ</p>
+                <p className="mt-1 text-xs leading-5 text-slate-600">
+                  固定seed 20260913のサンプルデータを全閲覧者で共通表示します。登録・更新などの疑似操作は共有データを変更せず、このブラウザ内だけに保持されます。
+                </p>
+                <div className="mt-3"><DemoResetPanel /></div>
+              </div>
+            ) : null}
           </CardBody>
         </Card>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 import { getStockInfoAction, type StockInfo } from "@/app/(app)/inventory/stock-actions";
 
@@ -11,7 +11,7 @@ export function useStockInfo() {
   const [loading, setLoading] = useState(false);
   const requestId = useRef(0);
 
-  async function load(locationId: string | undefined, productId: string | undefined) {
+  const load = useCallback(async (locationId: string | undefined, productId: string | undefined) => {
     const current = ++requestId.current;
     if (!locationId || !productId) {
       setInfo(null);
@@ -38,7 +38,7 @@ export function useStockInfo() {
     } finally {
       if (current === requestId.current) setLoading(false);
     }
-  }
+  }, []);
 
   return { info, error, loading, load };
 }

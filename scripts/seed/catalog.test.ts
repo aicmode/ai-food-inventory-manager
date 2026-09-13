@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { MAKERS, SEED_LOCATIONS, generateSuppliers } from "./catalog";
+import { MAKERS, SEED_LOCATIONS, generateProducts, generateSuppliers } from "./catalog";
 import { Rng } from "./random";
 
 describe("全国向けデモデータ", () => {
@@ -18,6 +18,16 @@ describe("全国向けデモデータ", () => {
     expect(first).toHaveLength(40);
     expect(new Set(first.map((supplier) => supplier.prefecture)).size).toBe(20);
     expect(first.filter((supplier) => supplier.prefecture === "鹿児島県")).toHaveLength(2);
+  });
+
+  it("公開デモ用に固定seedで1,000 SKUを再現できる", () => {
+    const first = generateProducts(new Rng(20260913), 1000);
+    const second = generateProducts(new Rng(20260913), 1000);
+
+    expect(first).toEqual(second);
+    expect(first).toHaveLength(1000);
+    expect(new Set(first.map((product) => product.sku)).size).toBe(1000);
+    expect(new Set(first.map((product) => product.janCode)).size).toBe(1000);
   });
 
   it("商品メーカー名に特定地域へ偏った旧名称を残さない", () => {

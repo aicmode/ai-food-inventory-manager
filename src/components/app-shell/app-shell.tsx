@@ -23,6 +23,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
+import { isDemoMode } from "@/lib/app-mode";
+
 type NavItem = { href: string; label: string; icon: LucideIcon };
 type NavGroup = { label: string; items: NavItem[] };
 
@@ -206,6 +208,11 @@ export function AppShell({ header, children }: { header: ReactNode; children: Re
             <Menu className="size-5" aria-hidden="true" />
           </button>
           {header}
+          {isDemoMode() ? (
+            <span className="shrink-0 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-800">
+              販売デモ
+            </span>
+          ) : null}
         </header>
         <main id="main" className="mx-auto w-full max-w-[1400px] px-3 py-6 sm:px-6">
           {children}
