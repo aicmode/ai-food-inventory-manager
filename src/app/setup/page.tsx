@@ -4,18 +4,19 @@ import { redirect } from "next/navigation";
 import { connection } from "next/server";
 
 import { Card, CardBody } from "@/components/ui/primitives";
-import { getDemoSessionEnv, getSupabasePublicEnv } from "@/lib/supabase/env";
+import { getAppMode } from "@/lib/app-mode";
+import { getSupabasePublicEnv } from "@/lib/supabase/env";
 
 export const metadata: Metadata = { title: "初期設定が必要です" };
 
 export default async function SetupPage({ searchParams }: PageProps<"/setup">) {
   // 環境変数の有無は実行時に判定する（ビルド時に静的化しない）
   await connection();
+  if (getAppMode() === "demo") redirect("/dashboard");
   const publicEnv = getSupabasePublicEnv();
-  const demoEnv = getDemoSessionEnv();
   const params = await searchParams;
   const reason = typeof params.reason === "string" ? params.reason : null;
-  if (publicEnv && demoEnv && !reason) redirect("/dashboard");
+  if (publicEnv && !reason) redirect("/dashboard");
 
   return (
     <main className="flex min-h-screen items-center justify-center px-4 py-10">
@@ -27,18 +28,16 @@ export default async function SetupPage({ searchParams }: PageProps<"/setup">) {
           </div>
           <p className="text-sm text-slate-700">
             {reason
-              ? "固定デモセッションまたはデモ組織を利用できません。環境変数と seed の実行結果を確認してください。"
-              : "このアプリは Supabase のデモデータを使用します。以下の接続設定が不足しているため、画面を表示できません。"}
+              ? "Client Production Modeの認証済みセッションまたは所属組織を利用できません。顧客向け認証構成を確認してください。"
+              : "Client Production Modeで必要なSupabase接続設定が不足しているため、業務画面を表示できません。"}
           </p>
           <ul className="list-disc space-y-1 pl-5 font-mono text-sm text-slate-800">
             <li>NEXT_PUBLIC_SUPABASE_URL</li>
             <li>NEXT_PUBLIC_SUPABASE_ANON_KEY</li>
-            <li>DEMO_USER_EMAIL</li>
-            <li>DEMO_USER_PASSWORD</li>
           </ul>
           <p className="text-sm text-slate-700">
             ローカル環境では <code className="rounded bg-slate-100 px-1">.env.example</code> をコピーして{" "}
-            <code className="rounded bg-slate-100 px-1">.env.local</code> を作成し、Vercel ではプロジェクトの Environment Variables に登録してください。手順は README の「セットアップ」を参照してください。
+            <code className="rounded bg-slate-100 px-1">.env.local</code> を作成してください。公開販売デモは環境変数なし、または <code className="rounded bg-slate-100 px-1">NEXT_PUBLIC_APP_MODE=demo</code> だけで動作します。
           </p>
         </CardBody>
       </Card>

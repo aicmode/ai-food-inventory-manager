@@ -7,10 +7,10 @@
  * - 日次の在庫シミュレーション（入荷→販売 FEFO→期限切れ廃棄→棚卸→発注点発注）で
  *   ロット・在庫・入出庫履歴・発注・入庫伝票・廃棄・棚卸の整合性を保ったまま生成する
  * - 日付はシード実行日（Asia/Tokyo）を基準に過去 SEED_HISTORY_DAYS 日分
- * - デモ実行主体が設定されていれば、本日分の入庫・出庫・移動・廃棄・棚卸・AI発注を
- *   実際の RPC 経由で実行する（RPC の動作確認を兼ねる）
+ * - `runTodayOperations` は顧客環境の認証済みclientを明示的に渡した場合だけ、
+ *   本日分の入庫・出庫・移動・廃棄・棚卸・AI発注をRPC経由で検証する
  *
- * 必要な環境変数: NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY / SUPABASE_SERVICE_ROLE_KEY
+ * 必要な環境変数: NEXT_PUBLIC_SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY
  */
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
@@ -503,26 +503,8 @@ async function findUserIdByEmail(admin: Client, email: string): Promise<string |
   return null;
 }
 
-async function ensureDemoUser(admin: Client, email: string, password: string): Promise<string> {
-  const existing = await findUserIdByEmail(admin, email);
-  if (existing) {
-    const { error } = await admin.auth.admin.updateUserById(existing, { password, email_confirm: true });
-    if (error) throw new Error(`デモユーザーの更新に失敗しました: ${error.message}`);
-    return existing;
-  }
-  const { data, error } = await admin.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-    user_metadata: { display_name: "デモユーザー" },
-  });
-  if (error || !data.user) throw new Error(`デモユーザーの作成に失敗しました: ${error?.message ?? "unknown"}`);
-  return data.user.id;
-}
-
 async function main() {
   const url = requiredEnv("NEXT_PUBLIC_SUPABASE_URL");
-  const anonKey = requiredEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY");
   const serviceKey = requiredEnv("SUPABASE_SERVICE_ROLE_KEY");
   const isLocal = /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?/.test(url);
   if (!isLocal && process.env.SEED_ALLOW_REMOTE?.trim() !== "true") {
@@ -843,26 +825,7 @@ async function main() {
     if (error) throw new Error(`伝票番号の初期化に失敗しました: ${error.message}`);
   }
 
-  // --- デモユーザー・オーナー ---
-  const demoEmail = process.env.DEMO_USER_EMAIL?.trim();
-  const demoPassword = process.env.DEMO_USER_PASSWORD?.trim();
-  let operator: Client | null = null;
-
-  if (demoEmail && demoPassword) {
-    const demoUserId = await ensureDemoUser(admin, demoEmail, demoPassword);
-    const { error: profileError } = await admin.from("profiles").upsert({ id: demoUserId, display_name: "デモユーザー", is_demo: true });
-    if (profileError) throw new Error(`デモプロフィールの更新に失敗しました: ${profileError.message}`);
-    const { error: memberError } = await admin.from("organization_members").insert({ organization_id: orgId, user_id: demoUserId, role: "admin" });
-    if (memberError) throw new Error(`デモユーザーの組織参加に失敗しました: ${memberError.message}`);
-    console.log(`  デモユーザー: ${demoEmail}（管理者・デモ制限あり）`);
-
-    operator = createClient<Database>(url, anonKey, { auth: { persistSession: false, autoRefreshToken: false } });
-    const { error: signInError } = await operator.auth.signInWithPassword({ email: demoEmail, password: demoPassword });
-    if (signInError) throw new Error(`デモユーザーでのログインに失敗しました: ${signInError.message}`);
-  } else {
-    console.log("  DEMO_USER_EMAIL / DEMO_USER_PASSWORD が未設定のため、デモユーザーと本日分の操作データは作成しません。");
-  }
-
+  // --- 顧客環境のオーナー（任意） ---
   const ownerEmail = process.env.SEED_OWNER_EMAIL?.trim();
   if (ownerEmail) {
     const ownerId = await findUserIdByEmail(admin, ownerEmail);
@@ -870,11 +833,6 @@ async function main() {
     const { error } = await admin.from("organization_members").upsert({ organization_id: orgId, user_id: ownerId, role: "owner" });
     if (error) throw new Error(`オーナーの追加に失敗しました: ${error.message}`);
     console.log(`  オーナー: ${ownerEmail}`);
-  }
-
-  // --- 本日分の業務操作（実際の RPC 経由） ---
-  if (operator) {
-    await runTodayOperations({ operator, admin, orgId, today, rng, locations, pos, productById, pairs: sim.pairs });
   }
 
   if (DEMO_READONLY) {
@@ -886,7 +844,7 @@ async function main() {
   console.log("\n完了しました。");
 }
 
-async function runTodayOperations(ctx: {
+export async function runTodayOperations(ctx: {
   operator: Client;
   admin: Client;
   orgId: string;

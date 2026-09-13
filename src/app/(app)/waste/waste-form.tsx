@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import type { ProductOption } from "@/app/(app)/products/actions";
 import { ProductPicker } from "@/components/forms/product-picker";
@@ -26,14 +26,13 @@ export function WasteForm({
   const [product, setProduct] = useState<ProductOption | null>(initial?.product ?? null);
   const [lotId, setLotId] = useState(initial?.lotId ?? "");
   const stock = useStockInfo();
-  const [loadedKey, setLoadedKey] = useState<string | null>(null);
+  const loadStock = stock.load;
   const productError = useFieldError("product_id");
-  const key = product ? `${locationId}:${product.id}` : null;
+  const productId = product?.id;
 
-  if (key !== loadedKey) {
-    setLoadedKey(key);
-    void stock.load(locationId, product?.id);
-  }
+  useEffect(() => {
+    void loadStock(locationId, productId);
+  }, [locationId, productId, loadStock]);
 
   const expiredDefault = stock.info?.lots.some((lot) => lot.expired);
 

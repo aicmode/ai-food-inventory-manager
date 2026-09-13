@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useId, useRef, useState, useTransition, type ReactNode } from "react";
 
 import type { ActionResult } from "@/lib/validation/common";
+import { demoSuccessMessage, recordDemoOperation } from "@/lib/app-mode";
 
 import { buttonClasses, type ButtonSize, type ButtonVariant } from "./button";
 import { useToast } from "./toast";
@@ -56,7 +57,8 @@ export function ConfirmButton({
         const result = await action();
         if (result.ok) {
           dialogRef.current?.close();
-          toast.success(result.message);
+          recordDemoOperation(result.message);
+          toast.success(demoSuccessMessage(result.message));
           if (result.redirectTo) router.push(result.redirectTo);
           else router.refresh();
         } else {

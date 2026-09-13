@@ -9,6 +9,7 @@ import { buttonClasses } from "@/components/ui/button";
 import { Badge } from "@/components/ui/primitives";
 import { useToast } from "@/components/ui/toast";
 import type { Explanation } from "@/lib/ai/provider";
+import { demoSuccessMessage, recordDemoOperation } from "@/lib/app-mode";
 import { isValidOrderQuantity, type RiskLevel } from "@/lib/domain/recommendation";
 import { RISK_LEVEL_LABELS, RISK_TONES } from "@/lib/labels";
 
@@ -112,7 +113,8 @@ export function RecommendationTable({
           })),
         });
         if (result.ok) {
-          toast.success(result.message);
+          recordDemoOperation(result.message);
+          toast.success(demoSuccessMessage(result.message));
           router.push(result.redirectTo ?? "/purchase-orders");
         } else {
           toast.error(result.message);

@@ -1,7 +1,7 @@
 "use client";
 
 import { Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import type { ProductOption } from "@/app/(app)/products/actions";
 import { ProductPicker } from "@/components/forms/product-picker";
@@ -32,15 +32,14 @@ function IssueLine({
   canRemove: boolean;
 }) {
   const stock = useStockInfo();
-  const [lastLocation, setLastLocation] = useState(locationId);
+  const loadStock = stock.load;
   const productError = useFieldError(`items.${index}.product_id`);
   const quantityError = useFieldError(`items.${index}.quantity`);
 
-  // 拠点が変わったら在庫情報を取り直す
-  if (lastLocation !== locationId) {
-    setLastLocation(locationId);
-    if (line.product) void stock.load(locationId, line.product.id);
-  }
+  const productId = line.product?.id;
+  useEffect(() => {
+    void loadStock(locationId, productId);
+  }, [locationId, productId, loadStock]);
 
   const usableLots = stock.info?.lots.filter((lot) => !lot.expired && lot.status === "available") ?? [];
   const quantity = Number(line.quantity);

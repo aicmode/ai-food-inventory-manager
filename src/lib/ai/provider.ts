@@ -1,6 +1,7 @@
 import "server-only";
 
 import { explanationPreservesQuantity } from "@/lib/ai/guard";
+import { isDemoMode } from "@/lib/app-mode";
 import { buildTemplateExplanation } from "@/lib/domain/reason-text";
 import type { RecommendationResult } from "@/lib/domain/recommendation";
 
@@ -131,6 +132,8 @@ function extractMessage(json: unknown): string | null {
 }
 
 export function getAiProvider(): AiProvider | null {
+  // 公開デモでは第三者の操作で外部APIの利用料金が発生しないよう、キーがあっても呼び出さない。
+  if (isDemoMode()) return null;
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) return null;
   const model = process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini";
@@ -139,14 +142,15 @@ export function getAiProvider(): AiProvider | null {
 }
 
 export function isAiConfigured(): boolean {
-  return Boolean(process.env.OPENAI_API_KEY?.trim());
+  return !isDemoMode() && Boolean(process.env.OPENAI_API_KEY?.trim());
 }
 
 export async function explainRecommendation(context: ExplanationContext): Promise<Explanation> {
   const template = buildTemplateExplanation(context.result, context);
   const provider = getAiProvider();
   if (!provider) {
-    return { text: template, source: "template", notice: "AI API が未設定のため、定型文で説明しています。" };
+    const notice = isDemoMode() ? "販売デモでは外部AI APIを使用せず、定型文で説明しています。" : "AI API が未設定のため、定型文で説明しています。";
+    return { text: template, source: "template", notice };
   }
 
   try {

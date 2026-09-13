@@ -4,8 +4,9 @@ import { redirect } from "next/navigation";
 import { cache } from "react";
 
 import { hasPermission, isMemberRole, type MemberRole, type Permission } from "@/lib/domain/permissions";
+import { createDataProvider } from "@/lib/data/provider";
 import { logDbError } from "@/lib/errors";
-import { createClient, type ServerSupabaseClient } from "@/lib/supabase/server";
+import type { ServerSupabaseClient } from "@/lib/supabase/server";
 
 export type OrgContext = {
   supabase: ServerSupabaseClient;
@@ -22,13 +23,30 @@ export type OrgContext = {
 
 /** JWT を検証してログインユーザーを取得（同一リクエスト内でキャッシュ） */
 export const getAuthUser = cache(async () => {
-  const supabase = await createClient();
+  const provider = await createDataProvider();
+  if (provider.mode === "demo") return { supabase: provider.client, userId: "10000000-0000-4000-8000-000000000002" };
+  const supabase = provider.client;
   const { data, error } = await supabase.auth.getClaims();
   if (error || !data?.claims?.sub) return null;
   return { supabase, userId: data.claims.sub };
 });
 
 export const getOrgContext = cache(async (): Promise<OrgContext | null> => {
+  const provider = await createDataProvider();
+  if (provider.mode === "demo") {
+    return {
+      supabase: provider.client,
+      isDemo: true,
+      role: "owner",
+      organization: {
+        id: "10000000-0000-4000-8000-000000000001",
+        name: "フレッシュマート ONE",
+        reviewPeriodDays: 3,
+        overstockDays: 45,
+        isDemoReadonly: false,
+      },
+    };
+  }
   const auth = await getAuthUser();
   if (!auth) return null;
   const { supabase, userId } = auth;
@@ -70,7 +88,7 @@ export const getOrgContext = cache(async (): Promise<OrgContext | null> => {
     org: row.organizations as NonNullable<(typeof rows)[number]["organizations"]>,
   }));
 
-  // ポートフォリオ版は seed 済みの固定デモ組織だけを利用する。
+  // Client Production Modeでは認証済みユーザーの最初の所属組織を利用する。
   const active = memberships[0];
   if (!active) {
     return null;
@@ -90,11 +108,11 @@ export const getOrgContext = cache(async (): Promise<OrgContext | null> => {
   };
 });
 
-/** ページ用: 固定デモセッションまたはデモ組織が利用できなければ設定案内へ */
+/** ページ用: production接続または所属組織が利用できなければ設定案内へ */
 export async function requireOrgContext(): Promise<OrgContext> {
   const context = await getOrgContext();
   if (context) return context;
-  redirect("/setup?reason=demo-context");
+  redirect("/setup?reason=production-context");
 }
 
 /** ページ用: 権限がない場合は権限エラー画面を表示 */
@@ -117,7 +135,7 @@ export type AuthorizeResult =
 export async function authorizeAction(permission?: Permission): Promise<AuthorizeResult> {
   const context = await getOrgContext();
   if (!context) {
-    return { ok: false, message: "デモ環境を利用できません。接続設定を確認してください。" };
+    return { ok: false, message: "データ環境を利用できません。接続設定を確認してください。" };
   }
   if (permission && !hasPermission(context.role, permission)) {
     return { ok: false, message: "この操作を行う権限がありません。" };
